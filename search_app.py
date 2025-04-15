@@ -9,7 +9,7 @@ df = pd.read_excel("assets_data.xlsx")
 df.columns = [col.strip() for col in df.columns]
 df["Asset Description"] = df["Asset Description"].astype(str).str.strip()
 
-st.set_page_config(page_title="Asset Lookup App", layout="wide")
+st.set_page_config(page_title="نظام البحث الذكي عن الأصول", layout="wide")
 st.title("🔍 نظام البحث الذكي عن الأصول")
 
 # اختيار نوع البحث
@@ -17,24 +17,25 @@ search_mode = st.radio("اختر طريقة البحث:", ["🔤 وصف الأص
 result = pd.DataFrame()
 
 if search_mode == "🔤 وصف الأصل":
-    search_input = st.text_input("🔍 اكتب وصف الأصل (مثال: حاسب آلي، طابعة، جهاز الخ)")
+    search_input = st.text_input("🔍 اكتب وصف الأصل (مثال: حاسب، طابعة، جهاز)")
     if search_input:
         # بناء نموذج TF-IDF
         vectorizer = TfidfVectorizer()
         tfidf_matrix = vectorizer.fit_transform(df["Asset Description"])
         query_vec = vectorizer.transform([search_input])
         similarity_scores = cosine_similarity(query_vec, tfidf_matrix).flatten()
-        
-        top_indices = similarity_scores.argsort()[::-1][:5]  # أفضل 5 تطابقات
-        matches = df.iloc[top_indices]
-        matches = matches[similarity_scores[top_indices] > 0.1]  # فقط النتائج اللي فيها تشابه واضح
-        
-        if not matches.empty:
-            selected_row = st.selectbox("اختر الأصل من النتائج:", matches["Asset Description"].values)
-            result = matches[matches["Asset Description"] == selected_row]
+
+        df["تشابه"] = similarity_scores
+        filtered = df[df["تشابه"] > 0.05].sort_values(by="تشابه", ascending=False).head(10)
+
+        if not filtered.empty:
+            st.success(f"تم العثور على {len(filtered)} نتيجة قريبة 👇")
+            st.table(filtered[["Asset Description", "تشابه"]])
+            selected_desc = st.selectbox("اختر وصف الأصل لعرض التفاصيل:", filtered["Asset Description"].values)
+            result = df[df["Asset Description"] == selected_desc]
         else:
             st.warning("لم يتم العثور على أوصاف مشابهة.")
-            
+
 elif search_mode == "🔢 Tag Number":
     tag_number_input = st.text_input("أدخل رقم الأصل:")
     if tag_number_input:
