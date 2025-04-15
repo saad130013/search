@@ -19,8 +19,8 @@ result = pd.DataFrame()
 if search_mode == "🔤 وصف الأصل":
     search_input = st.text_input("🔍 اكتب وصف الأصل (مثال: حاسب، طابعة، جهاز)")
     if search_input:
-        # بناء نموذج TF-IDF
-        vectorizer = TfidfVectorizer()
+        # استخدام n-gram character-based TF-IDF
+        vectorizer = TfidfVectorizer(analyzer='char_wb', ngram_range=(3, 5))
         tfidf_matrix = vectorizer.fit_transform(df["Asset Description"])
         query_vec = vectorizer.transform([search_input])
         similarity_scores = cosine_similarity(query_vec, tfidf_matrix).flatten()
