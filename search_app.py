@@ -5,10 +5,14 @@ from fpdf import FPDF
 
 # Load and clean the data
 df = pd.read_excel("assets_data.xlsx")
-df.columns = [col.strip() for col in df.columns]  # إزالة الفراغات من أسماء الأعمدة
+df.columns = [col.strip() for col in df.columns]  # تنظيف أسماء الأعمدة
 
 st.set_page_config(page_title="Asset Lookup App", layout="wide")
 st.title("🔍 نظام البحث عن الأصول")
+
+# طباعة الأعمدة الظاهرة في الملف (للتصحيح)
+with st.expander("🔧 أسماء الأعمدة الفعلية (للتصحيح الداخلي)"):
+    st.write(df.columns.tolist())
 
 # البحث إما بوصف الأصل أو رقم الأصل
 search_mode = st.radio("اختر طريقة البحث:", ["🔤 وصف الأصل", "🔢 Tag Number"])
@@ -38,7 +42,16 @@ options = st.multiselect(
 if not result.empty:
     if "بيانات تعريف الأصل الأساسية" in options:
         st.subheader("📘 بيانات تعريف الأصل الأساسية")
-        st.table(result[["Unique Factory ID (Asset Serial Number)", "Old Tag number", "Custodian"]])
+        cols = [
+            "Unique Factory ID (Asset Serial Number)", 
+            "Old Tag number", 
+            "Custodian"
+        ]
+        existing_cols = [col for col in cols if col in df.columns]
+        if existing_cols:
+            st.table(result[existing_cols])
+        else:
+            st.error("❌ بعض الأعمدة غير موجودة: " + ", ".join(cols))
 
     if "تصنيف الأصل المحاسبي" in options:
         st.subheader("📗 التصنيف المحاسبي")
