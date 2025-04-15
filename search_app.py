@@ -1,32 +1,40 @@
 
 import streamlit as st
 import pandas as pd
-from fpdf import FPDF
-from difflib import get_close_matches
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-# تحميل البيانات وتنظيف أسماء الأعمدة
+# تحميل البيانات وتنظيف الأعمدة
 df = pd.read_excel("assets_data.xlsx")
 df.columns = [col.strip() for col in df.columns]
 df["Asset Description"] = df["Asset Description"].astype(str).str.strip()
 
 st.set_page_config(page_title="Asset Lookup App", layout="wide")
-st.title("🔍 نظام البحث عن الأصول")
+st.title("🔍 نظام البحث الذكي عن الأصول")
 
 # اختيار نوع البحث
 search_mode = st.radio("اختر طريقة البحث:", ["🔤 وصف الأصل", "🔢 Tag Number"])
 result = pd.DataFrame()
 
 if search_mode == "🔤 وصف الأصل":
-    all_descriptions = df["Asset Description"].dropna().unique()
-    search_input = st.text_input("🔍 اكتب جزء من وصف الأصل:")
+    search_input = st.text_input("🔍 اكتب وصف الأصل (مثال: حاسب آلي، طابعة، جهاز الخ)")
     if search_input:
-        matches = get_close_matches(search_input, all_descriptions, n=10, cutoff=0.3)
-        if matches:
-            st.success(f"تم العثور على {len(matches)} اقتراحات")
-            selected_desc = st.selectbox("هل تقصد أحد هذه الأوصاف؟", matches)
-            result = df[df["Asset Description"] == selected_desc]
+        # بناء نموذج TF-IDF
+        vectorizer = TfidfVectorizer()
+        tfidf_matrix = vectorizer.fit_transform(df["Asset Description"])
+        query_vec = vectorizer.transform([search_input])
+        similarity_scores = cosine_similarity(query_vec, tfidf_matrix).flatten()
+        
+        top_indices = similarity_scores.argsort()[::-1][:5]  # أفضل 5 تطابقات
+        matches = df.iloc[top_indices]
+        matches = matches[similarity_scores[top_indices] > 0.1]  # فقط النتائج اللي فيها تشابه واضح
+        
+        if not matches.empty:
+            selected_row = st.selectbox("اختر الأصل من النتائج:", matches["Asset Description"].values)
+            result = matches[matches["Asset Description"] == selected_row]
         else:
-            st.warning("لم يتم العثور على أوصاف مطابقة.")
+            st.warning("لم يتم العثور على أوصاف مشابهة.")
+            
 elif search_mode == "🔢 Tag Number":
     tag_number_input = st.text_input("أدخل رقم الأصل:")
     if tag_number_input:
