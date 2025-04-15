@@ -3,8 +3,9 @@ import streamlit as st
 import pandas as pd
 from fpdf import FPDF
 
-# Load the data
+# Load and clean the data
 df = pd.read_excel("assets_data.xlsx")
+df.columns = [col.strip() for col in df.columns]  # إزالة الفراغات من أسماء الأعمدة
 
 st.set_page_config(page_title="Asset Lookup App", layout="wide")
 st.title("🔍 نظام البحث عن الأصول")
@@ -37,7 +38,7 @@ options = st.multiselect(
 if not result.empty:
     if "بيانات تعريف الأصل الأساسية" in options:
         st.subheader("📘 بيانات تعريف الأصل الأساسية")
-        st.table(result[["Unique Asset Number in the entity", "Old Tag number", "Custodian"]])
+        st.table(result[["Unique Factory ID (Asset Serial Number)", "Old Tag number", "Custodian"]])
 
     if "تصنيف الأصل المحاسبي" in options:
         st.subheader("📗 التصنيف المحاسبي")
@@ -46,8 +47,9 @@ if not result.empty:
             "Level 2 FA Module - Arabic Description", "Level 2 FA Module - English Description", "Level 2 FA Module Code",
             "Level 3 FA Module - Arabic Description", "Level 3 FA Module - English Description", "Level 3 FA Module Code",
             "accounting group Arabic Description", "accounting group English Description", "accounting group Code",
-            "Asset Code For Accounting Purpose"
+            "Asset Code For Accounting Purpose "
         ]
+        cols = [col.strip() for col in cols if col.strip() in df.columns]
         st.table(result[cols])
 
     if "التفاصيل الفنية والمالية والموقع" in options:
@@ -61,7 +63,7 @@ if not result.empty:
             "Valuation Report Date", "Opening Balance Date", "Asset Opening Value", "Valuation Report Reference",
             "Base Unit of Measure", "Quantity", "Floors Number", "Room/office Number"
         ]
+        cols = [col.strip() for col in cols if col.strip() in df.columns]
         st.table(result[cols])
 else:
     st.warning("الرجاء إدخال وصف أو رقم أصل صالح للبحث.")
-
