@@ -7,31 +7,36 @@ from difflib import get_close_matches
 # تحميل البيانات وتنظيف أسماء الأعمدة
 df = pd.read_excel("assets_data.xlsx")
 df.columns = [col.strip() for col in df.columns]
+df["Asset Description"] = df["Asset Description"].astype(str).str.strip()
 
 st.set_page_config(page_title="Asset Lookup App", layout="wide")
 st.title("🔍 نظام البحث عن الأصول")
 
-# البحث إما بوصف الأصل أو رقم الأصل
+# اختيار نوع البحث
 search_mode = st.radio("اختر طريقة البحث:", ["🔤 وصف الأصل", "🔢 Tag Number"])
-
 result = pd.DataFrame()
 
 if search_mode == "🔤 وصف الأصل":
-    asset_descriptions = df["Asset Description"].dropna().unique()
+    all_descriptions = df["Asset Description"].dropna().unique()
     search_input = st.text_input("🔍 اكتب جزء من وصف الأصل:")
     if search_input:
-        matches = get_close_matches(search_input, asset_descriptions, n=5, cutoff=0.3)
+        matches = get_close_matches(search_input, all_descriptions, n=10, cutoff=0.3)
         if matches:
+            st.success(f"تم العثور على {len(matches)} اقتراحات")
             selected_desc = st.selectbox("هل تقصد أحد هذه الأوصاف؟", matches)
             result = df[df["Asset Description"] == selected_desc]
         else:
-            st.warning("ما تم العثور على أوصاف قريبة.")
+            st.warning("لم يتم العثور على أوصاف مطابقة.")
 elif search_mode == "🔢 Tag Number":
     tag_number_input = st.text_input("أدخل رقم الأصل:")
     if tag_number_input:
-        result = df[df["Tag number"].astype(str) == tag_number_input]
+        tag_column = [col for col in df.columns if "Tag number" in col]
+        if tag_column:
+            result = df[df[tag_column[0]].astype(str).str.strip() == tag_number_input]
+        else:
+            st.error("⚠️ لم يتم العثور على عمود رقم الأصل (Tag Number) في الملف.")
 
-# اختيار نوع البيانات المراد عرضها
+# اختيار البيانات التي يرغب المستخدم بعرضها
 st.markdown("## حدد البيانات التي ترغب في عرضها")
 options = st.multiselect(
     "اختر من التالي:",
@@ -48,10 +53,7 @@ if not result.empty:
             "Custodian"
         ]
         existing_cols = [col for col in cols if col in df.columns]
-        if existing_cols:
-            st.table(result[existing_cols])
-        else:
-            st.error("❌ بعض الأعمدة غير موجودة: " + ", ".join(cols))
+        st.table(result[existing_cols])
 
     if "تصنيف الأصل المحاسبي" in options:
         st.subheader("📗 التصنيف المحاسبي")
